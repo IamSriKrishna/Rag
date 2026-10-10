@@ -5,6 +5,7 @@ pydantic-settings
 pydantic[email]
 python-multipart
 sqlalchemy
+alembic
 psycopg[binary]
 pwdlib[argon2]
 PyJWT

@@ -5,7 +5,7 @@ from app.models.conversation import Conversation, Message
 
 
 class ConversationRepository:
-    def __int__(self, db: Session):
+    def __init__(self, db: Session):
         self.db = db
 
     def get_for_user(

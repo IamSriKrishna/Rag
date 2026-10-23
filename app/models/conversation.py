@@ -21,9 +21,9 @@ class Conversation(Base):
         nullable=False,
         index=True,
     )
-    document_id: Mapped[int] = mapped_column(
+    document_id: Mapped[int | None] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     title: Mapped[str] = mapped_column(

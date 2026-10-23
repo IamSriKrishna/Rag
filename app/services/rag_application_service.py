@@ -21,17 +21,30 @@ class RAGApplicationService:
     def ask(
         self,
         user: User,
-        document_id: int,
+        document_id: int | None,
         question: str,
         conversation_id: int | None = None,
     ) -> RAGResponse:
-        document = self.documents.get_by_id_for_tenant(document_id, user.tenant_id)
-        if document is None:
-            raise HTTPException(status_code=404, detail="Document not found")
-        if document.status != "indexed":
-            raise HTTPException(
-                status_code=409, detail="Document is not ready for questions"
+        if document_id is None:
+            search_documents = self.documents.list_indexed_for_tenant(user.tenant_id)
+            if not search_documents:
+                raise HTTPException(
+                    status_code=409,
+                    detail="No indexed documents are available to search",
+                )
+            document = None
+        else:
+            document = self.documents.get_by_id_for_tenant(
+                document_id, user.tenant_id
             )
+            if document is None:
+                raise HTTPException(status_code=404, detail="Document not found")
+            if document.status != "indexed":
+                raise HTTPException(
+                    status_code=409, detail="Document is not ready for questions"
+                )
+            search_documents = [document]
+
         if conversation_id is not None:
             conversation = self.conversations.get_for_user(
                 conversation_id, user.id, user.tenant_id
@@ -54,11 +67,14 @@ class RAGApplicationService:
         payload = {
             "tenant_id": user.tenant_id,
             "user_id": user.id,
-            "document_id": document.id,
-            "document_version": document.file_hash,
+            "document_id": document_id,
+            "documents": [
+                {"id": item.id, "version": item.file_hash}
+                for item in search_documents
+            ],
             "question": question.strip().lower(),
             "model": settings.ollama_chat_model,
-            "prompt_version": settings.prompt_version,
+            "prompt_version": f"{settings.prompt_version}:evidence-focused-v3",
         }
         cached = self.cache.get(payload) if not history else None
         if cached is not None:
@@ -70,10 +86,11 @@ class RAGApplicationService:
             CACHE_MISSES.inc()
             answer, sources = self.rag.answer(
                 question,
-                document.id,
+                document_id,
                 user.tenant_id,
-                document.filename,
+                document.filename if document is not None else None,
                 history=history,
+                source_filenames={item.id: item.filename for item in search_documents},
             )
             was_cached = False
             if not history:

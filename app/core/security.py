@@ -25,4 +25,4 @@ def create_access_token(user_id: int, tenant_id: int) -> str:
         "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
     }
 
-    return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+    return jwt.encode(payload, settings.signing_secret, algorithm="HS256")

@@ -30,6 +30,18 @@ class DocumentRepository:
             )
         )
 
+    def list_indexed_for_tenant(self, tenant_id: int) -> list[Document]:
+        return list(
+            self.db.scalars(
+                select(Document)
+                .where(
+                    Document.tenant_id == tenant_id,
+                    Document.status == "indexed",
+                )
+                .order_by(Document.created_at.desc())
+            )
+        )
+
     def create(self, document: Document) -> Document:
         self.db.add(document)
         self.db.commit()
